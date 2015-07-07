@@ -16,8 +16,8 @@ type User struct {
 
 type Connection struct {
     Id string `json:"id"`
-    From string `json:"from"`
-    To string `json:"to"`
+    Source string `json:"from"`
+    Dest string `json:"to"`
 }
 
 type UserResource struct {
@@ -78,12 +78,12 @@ func (u UserResource) Register(container *restful.Container) {
         Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
         Writes([]User{})) // on the response
 
-    ws.Route(ws.PUT("/{user-id}/connectedUsers/{duser-id}").To(connRes.addConnectedUser).
+    ws.Route(ws.PUT("/{user-id}/connectedUsers/{dest-id}").To(connRes.addConnectedUser).
         // docs
         Doc("add a connected user relation").
         Operation("addConnectedUser").
         Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
-        Param(ws.PathParameter("dest-user-id", "identifier of the destination user").DataType("string")).
+        Param(ws.PathParameter("dest-id", "identifier of the destination user").DataType("string")).
         Writes(Connection{})) // on the response
 
     container.Add(ws)
@@ -116,8 +116,8 @@ func (c ConnectionResource) Register(container *restful.Container) {
 //
 func (c ConnectionResource) findConnection(request *restful.Request, response *restful.Response) {
     id := request.PathParameter("conn-id")
-    conn := c.conns[id]
-    if len(conn.Id) == 0 {
+    conn, exists := c.conns[id]
+    if exists {
         response.AddHeader("Content-Type", "text/plain")
         response.WriteErrorString(http.StatusNotFound, "404: Connection could not be found.")
         return
@@ -127,16 +127,16 @@ func (c ConnectionResource) findConnection(request *restful.Request, response *r
 
 func (c ConnectionResource) findConnectionsForUser(request *restful.Request, response *restful.Response) {
     id := request.PathParameter("user-id")
-    usr := userRes.users[id]
-    if len(usr.Id) == 0 {
+    _, exists := userRes.users[id]
+    if exists {
         response.AddHeader("Content-Type", "text/plain")
         response.WriteErrorString(http.StatusNotFound, "404: User could not be found.")
         return
     }
     users := make([]User,0)
     for _,value := range c.conns {
-        if value.From == id {
-            users = append(users,userRes.users[value.To])
+        if value.Source == id {
+            users = append(users,userRes.users[value.Dest])
         }
     }
     response.WriteEntity(users)
@@ -161,15 +161,26 @@ func (c *ConnectionResource) createConnection(request *restful.Request, response
 // PUT http://localhost:8080/users/{id}/connectedUsers/{id2}
 //
 func (c *ConnectionResource) addConnectedUser(request *restful.Request, response *restful.Response) {
-    conn := new(Connection)
     user1 := request.PathParameter("user-id")
-    user2 := request.PathParameter("dest-user-id")
-    conn.From = user1
-    conn.To = user2
-    conn.Id = strconv.Itoa(len(c.conns) + 1) // simple id generation
-    c.conns[conn.Id] = *conn
+    user2 := request.PathParameter("dest-id")
+    if len(userRes.users[user1].Id) == 0 || len(userRes.users[user2].Id) == 0 {
+        response.AddHeader("Content-Type", "text/plain")
+        response.WriteErrorString(http.StatusNotFound, "404: User could not be found.")
+        return
+    }
+    c.createNewConnection(user1, user2)
+    c.createNewConnection(user2, user1)
     response.WriteHeader(http.StatusCreated)
-    response.WriteEntity(conn)
+}
+
+func (c *ConnectionResource) createNewConnection(user1, user2 string) *Connection {
+    id := strconv.Itoa(len(c.conns) + 1)
+    conn := new(Connection)
+    conn.Id = id
+    conn.Source = user1
+    conn.Dest = user2
+    c.conns[conn.Id] = *conn
+    return conn
 }
 
 // GET http://localhost:8080/users/1
