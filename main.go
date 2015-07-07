@@ -14,9 +14,20 @@ type User struct {
     Name string `json:"name"`
 }
 
+type Connection struct {
+    Id string `json:"id"`
+    From string `json:"from"`
+    To string `json:"to"`
+}
+
 type UserResource struct {
     // normally one would use DAO (data access object)
     users map[string]User
+}
+
+type ConnectionResource struct {
+    // normally one would use DAO (data access object)
+    conns map[string]Connection
 }
 
 func (u UserResource) Register(container *restful.Container) {
@@ -60,7 +71,105 @@ func (u UserResource) Register(container *restful.Container) {
         Operation("removeUser").
         Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")))
 
+    ws.Route(ws.GET("/{user-id}/connectedUsers").To(connRes.findConnectionsForUser).
+        // docs
+        Doc("get a list connections").
+        Operation("findConnectionsForUser").
+        Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
+        Writes([]User{})) // on the response
+
+    ws.Route(ws.PUT("/{user-id}/connectedUsers/{duser-id}").To(connRes.addConnectedUser).
+        // docs
+        Doc("add a connected user relation").
+        Operation("addConnectedUser").
+        Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
+        Param(ws.PathParameter("dest-user-id", "identifier of the destination user").DataType("string")).
+        Writes(Connection{})) // on the response
+
     container.Add(ws)
+}
+
+func (c ConnectionResource) Register(container *restful.Container) {
+    ws := new(restful.WebService)
+    ws.
+        Path("/connections").
+        Doc("Manage Connections").
+        Consumes(restful.MIME_JSON, restful.MIME_XML).
+        Produces(restful.MIME_JSON, restful.MIME_XML) // you can specify this per route as well
+
+    ws.Route(ws.GET("/{conn-id}").To(c.findConnection).
+        // docs
+        Doc("get a connection").
+        Operation("findConnection").
+        Param(ws.PathParameter("conn-id", "identifier of the connection").DataType("string")).
+        Writes(Connection{})) // on the response
+
+    ws.Route(ws.POST("").To(c.createConnection).
+        // docs
+        Doc("create a connection").
+        Operation("createConnection").
+        Reads(Connection{})) // from the request
+    container.Add(ws)
+}
+
+// GET http://localhost:8080/connections/1
+//
+func (c ConnectionResource) findConnection(request *restful.Request, response *restful.Response) {
+    id := request.PathParameter("conn-id")
+    conn := c.conns[id]
+    if len(conn.Id) == 0 {
+        response.AddHeader("Content-Type", "text/plain")
+        response.WriteErrorString(http.StatusNotFound, "404: Connection could not be found.")
+        return
+    }
+    response.WriteEntity(conn)
+}
+
+func (c ConnectionResource) findConnectionsForUser(request *restful.Request, response *restful.Response) {
+    id := request.PathParameter("user-id")
+    usr := userRes.users[id]
+    if len(usr.Id) == 0 {
+        response.AddHeader("Content-Type", "text/plain")
+        response.WriteErrorString(http.StatusNotFound, "404: User could not be found.")
+        return
+    }
+    users := make([]User,0)
+    for _,value := range c.conns {
+        if value.From == id {
+            users = append(users,userRes.users[value.To])
+        }
+    }
+    response.WriteEntity(users)
+}
+
+// POST http://localhost:8080/connections
+//
+func (c *ConnectionResource) createConnection(request *restful.Request, response *restful.Response) {
+    conn := new(Connection)
+    err := request.ReadEntity(conn)
+    if err != nil {
+        response.AddHeader("Content-Type", "text/plain")
+        response.WriteErrorString(http.StatusInternalServerError, err.Error())
+        return
+    }
+    conn.Id = strconv.Itoa(len(c.conns) + 1) // simple id generation
+    c.conns[conn.Id] = *conn
+    response.WriteHeader(http.StatusCreated)
+    response.WriteEntity(conn)
+}
+
+// PUT http://localhost:8080/users/{id}/connectedUsers/{id2}
+//
+func (c *ConnectionResource) addConnectedUser(request *restful.Request, response *restful.Response) {
+    conn := new(Connection)
+    user1 := request.PathParameter("user-id")
+    user2 := request.PathParameter("dest-user-id")
+    conn.From = user1
+    conn.To = user2
+    conn.Id = strconv.Itoa(len(c.conns) + 1) // simple id generation
+    c.conns[conn.Id] = *conn
+    response.WriteHeader(http.StatusCreated)
+    response.WriteEntity(conn)
 }
 
 // GET http://localhost:8080/users/1
@@ -129,13 +238,17 @@ func (u *UserResource) removeUser(request *restful.Request, response *restful.Re
     delete(u.users, id)
 }
 
+var userRes = UserResource{map[string]User{}}
+var connRes = ConnectionResource{map[string]Connection{}}
+
 func main() {
     // to see what happens in the package, uncomment the following
     //restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
 
     wsContainer := restful.NewContainer()
-    userRes := UserResource{map[string]User{}}
+    
     userRes.Register(wsContainer)
+    connRes.Register(wsContainer)
 
     // Optionally, you can install the Swagger Service which provides a nice Web UI on your REST API
     // You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
