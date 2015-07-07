@@ -73,7 +73,7 @@ func (u UserResource) Register(container *restful.Container) {
 
     ws.Route(ws.GET("/{user-id}/connectedUsers").To(connRes.findConnectionsForUser).
         // docs
-        Doc("get a list connections").
+        Doc("get the of list connected users").
         Operation("findConnectionsForUser").
         Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
         Writes([]User{})) // on the response
