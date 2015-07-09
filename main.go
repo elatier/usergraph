@@ -1,106 +1,104 @@
 package main
 
 import (
-    "log"
-    "net/http"
+	"log"
+	"net/http"
 
-    "github.com/emicklei/go-restful"
-    "github.com/emicklei/go-restful/swagger"
+	"github.com/emicklei/go-restful"
+	"github.com/emicklei/go-restful/swagger"
 )
 
 type User struct {
-    Id string `json:"id"`
-    Name string `json:"name"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type UserGraphResource struct {
-    // normally one would use DAO (data access object)
-    users map[string]User
-    edges map[string][]string
+	// normally one would use DAO (data access object)
+	users map[string]User
+	edges map[string][]string
 }
-
 
 func (u UserGraphResource) Register(container *restful.Container) {
-    ws := new(restful.WebService)
-    ws.
-        Path("/users").
-        Doc("Manage Users").
-        Consumes(restful.MIME_JSON, restful.MIME_XML).
-        Produces(restful.MIME_JSON, restful.MIME_XML) // you can specify this per route as well
+	ws := new(restful.WebService)
+	ws.
+		Path("/users").
+		Doc("Manage Users").
+		Consumes(restful.MIME_JSON, restful.MIME_XML).
+		Produces(restful.MIME_JSON, restful.MIME_XML) // you can specify this per route as well
 
-    ws.Route(ws.GET("/{user-id}").To(u.findUser).
-        // docs
-        Doc("get a user").
-        Operation("findUser").
-        Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
-        Writes(User{})) // on the response
+	ws.Route(ws.GET("/{user-id}").To(u.findUser).
+		// docs
+		Doc("get a user").
+		Operation("findUser").
+		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
+		Writes(User{})) // on the response
 
-    ws.Route(ws.GET("").To(u.listUsers).
-        // docs
-        Doc("get a user").
-        Operation("findUser").
-        Writes([]User{})) // on the response
+	ws.Route(ws.GET("").To(u.listUsers).
+		// docs
+		Doc("get a user").
+		Operation("findUser").
+		Writes([]User{})) // on the response
 
-    ws.Route(ws.PUT("/{user-id}").To(u.updateUser).
-        // docs
-        Doc("update a user").
-        Operation("updateUser").
-        Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
-        ReturnsError(409, "duplicate user-id", nil).
-        Reads(User{})) // from the request
+	ws.Route(ws.PUT("/{user-id}").To(u.updateUser).
+		// docs
+		Doc("update a user").
+		Operation("updateUser").
+		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
+		ReturnsError(409, "duplicate user-id", nil).
+		Reads(User{})) // from the request
 
-    ws.Route(ws.POST("").To(u.createUser).
-        // docs
-        Doc("create a user").
-        Operation("createUser").
-        Reads(User{})) // from the request
+	ws.Route(ws.POST("").To(u.createUser).
+		// docs
+		Doc("create a user").
+		Operation("createUser").
+		Reads(User{})) // from the request
 
-    ws.Route(ws.DELETE("/{user-id}").To(u.removeUser).
-        // docs
-        Doc("delete a user").
-        Operation("removeUser").
-        Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")))
+	ws.Route(ws.DELETE("/{user-id}").To(u.removeUser).
+		// docs
+		Doc("delete a user").
+		Operation("removeUser").
+		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")))
 
-    ws.Route(ws.GET("/{user-id}/connectedUsers").To(u.getConnectedUsers).
-        // docs
-        Doc("get the of list connected users").
-        Operation("getConnectedUsers").
-        Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
-        Writes([]User{})) // on the response
+	ws.Route(ws.GET("/{user-id}/connectedUsers").To(u.getConnectedUsers).
+		// docs
+		Doc("get the of list connected users").
+		Operation("getConnectedUsers").
+		Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
+		Writes([]User{})) // on the response
 
-    ws.Route(ws.PUT("/{user-id}/connectedUsers/{dest-id}").To(u.addConnectedUser).
-        // docs
-        Doc("add a connected user relation").
-        Operation("addConnectedUser").
-        Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
-        Param(ws.PathParameter("dest-id", "identifier of the destination user").DataType("string")))
+	ws.Route(ws.PUT("/{user-id}/connectedUsers/{dest-id}").To(u.addConnectedUser).
+		// docs
+		Doc("add a connected user relation").
+		Operation("addConnectedUser").
+		Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
+		Param(ws.PathParameter("dest-id", "identifier of the destination user").DataType("string")))
 
-    container.Add(ws)
+	container.Add(ws)
 }
 
-
 func main() {
-    // to see what happens in the package, uncomment the following
-    //restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
-    ug := UserGraphResource{map[string]User{}, map[string][]string{}}
-    wsContainer := restful.NewContainer()
-    
-    ug.Register(wsContainer)
+	// to see what happens in the package, uncomment the following
+	//restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
+	ug := UserGraphResource{map[string]User{}, map[string][]string{}}
+	wsContainer := restful.NewContainer()
 
-    // Optionally, you can install the Swagger Service which provides a nice Web UI on your REST API
-    // You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
-    // Open http://localhost:8080/apidocs and enter http://localhost:8080/apidocs.json in the api input field.
-    config := swagger.Config{
-        WebServices:    wsContainer.RegisteredWebServices(), // you control what services are visible
-        WebServicesUrl: "http://localhost:8080",
-        ApiPath:        "/apidocs.json",
+	ug.Register(wsContainer)
 
-        // Optionally, specifiy where the UI is located
-        SwaggerPath:     "/apidocs/",
-        SwaggerFilePath: "/Users/kriaval/developer/swagger-ui"}
-    swagger.RegisterSwaggerService(config, wsContainer)
+	// Optionally, you can install the Swagger Service which provides a nice Web UI on your REST API
+	// You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
+	// Open http://localhost:8080/apidocs and enter http://localhost:8080/apidocs.json in the api input field.
+	config := swagger.Config{
+		WebServices:    wsContainer.RegisteredWebServices(), // you control what services are visible
+		WebServicesUrl: "http://localhost:8080",
+		ApiPath:        "/apidocs.json",
 
-    log.Printf("start listening on localhost:8080")
-    server := &http.Server{Addr: ":8080", Handler: wsContainer}
-    log.Fatal(server.ListenAndServe())
+		// Optionally, specifiy where the UI is located
+		SwaggerPath:     "/apidocs/",
+		SwaggerFilePath: "/Users/kriaval/developer/swagger-ui"}
+	swagger.RegisterSwaggerService(config, wsContainer)
+
+	log.Printf("start listening on localhost:8080")
+	server := &http.Server{Addr: ":8080", Handler: wsContainer}
+	log.Fatal(server.ListenAndServe())
 }
