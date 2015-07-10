@@ -46,12 +46,14 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Operation("updateUser").
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
 		ReturnsError(409, "duplicate user-id", nil).
+		ReturnsError(404, "User could not be found", nil).
 		Reads(User{})) // from the request
 
 	ws.Route(ws.POST("").To(u.createUser).
 		// docs
 		Doc("create a user").
 		Operation("createUser").
+		Returns(201, "User creted", User{}).
 		Reads(User{})) // from the request
 
 	ws.Route(ws.DELETE("/{user-id}").To(u.removeUser).
