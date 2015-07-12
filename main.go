@@ -14,9 +14,7 @@ type User struct {
 }
 
 type UserGraphResource struct {
-	// normally one would use DAO (data access object)
-	users map[string]User
-	edges map[string][]string
+
 }
 
 func (u UserGraphResource) Register(container *restful.Container) {
@@ -70,7 +68,7 @@ func (u UserGraphResource) Register(container *restful.Container) {
 func main() {
 	// to see what happens in the package, uncomment the following
 	//restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
-	ug := UserGraphResource{map[string]User{}, map[string][]string{}}
+	ug := UserGraphResource{}
 	wsContainer := restful.NewContainer()
 
 	ug.Register(wsContainer)
