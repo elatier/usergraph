@@ -34,12 +34,6 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
 		Writes(User{})) // on the response
 
-	ws.Route(ws.GET("").To(u.listUsers).
-		// docs
-		Doc("get a user").
-		Operation("findUser").
-		Writes([]User{})) // on the response
-
 	ws.Route(ws.PUT("/{user-id}").To(u.updateUser).
 		// docs
 		Doc("update a user").
@@ -55,12 +49,6 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Operation("createUser").
 		Returns(201, "User creted", User{}).
 		Reads(User{})) // from the request
-
-	ws.Route(ws.DELETE("/{user-id}").To(u.removeUser).
-		// docs
-		Doc("delete a user").
-		Operation("removeUser").
-		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")))
 
 	ws.Route(ws.GET("/{user-id}/connectedUsers").To(u.getConnectedUsers).
 		// docs
