@@ -1,24 +1,12 @@
 package main
 
 import (
-	"github.com/emicklei/go-restful"
-	"net/http"
-	"github.com/franela/goreq"
 	"fmt"
+	"github.com/emicklei/go-restful"
+	"github.com/franela/goreq"
+	"net/http"
 	"strconv"
-	"errors"
 )
-
-type Object struct {
-	Id   string `json:"id"`
-	Data UserGraphNode`json:"data"`
-	Version int `json:"version"`
-}
-
-type UserGraphNode struct {
-	User User `json:"user"`
-	Edges []string `json:"edges"`
-}
 
 func (u UserGraphResource) getConnectedUsers(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
@@ -32,7 +20,7 @@ func (u UserGraphResource) getConnectedUsers(request *restful.Request, response 
 		if err != nil {
 			return
 		}
-		relatedUser :=  relatedObj.Data.User
+		relatedUser := relatedObj.Data.User
 		relatedUser.Id = relatedObj.Id
 		users = append(users, relatedUser)
 
@@ -45,7 +33,7 @@ func (u UserGraphResource) getConnectedUsers(request *restful.Request, response 
 func (u UserGraphResource) addConnectedUser(request *restful.Request, response *restful.Response) {
 	user1 := request.PathParameter("user-id")
 	user2 := request.PathParameter("dest-id")
-	if user1==user2 {
+	if user1 == user2 {
 		response.AddHeader("Content-Type", "text/plain")
 		response.WriteErrorString(http.StatusBadRequest, "Source and destination ID is indentical")
 		return
@@ -70,82 +58,17 @@ func (u UserGraphResource) addConnectedUser(request *restful.Request, response *
 	response.WriteHeader(http.StatusCreated)
 }
 
-func (u UserGraphResource) createNewConnection(user1, user2 *Object) error {
-	edges := user1.Data.Edges
-	relatedId := user2.Id
-	for _, value := range edges {
-		if value == relatedId {
-			return nil
-		}
-	}
-	user1.Data.Edges = append(edges, relatedId)
-	return u.updateObject(user1)
-}
-
-func (u *UserGraphResource) updateObject(obj *Object) (error) {
-	res, err := goreq.Request{
-		Method: "PUT",
-		Body: obj,
-		Uri: u.baseUrl+obj.Id,
-		Accept: "application/json",
-		ContentType: "application/json",
-	}.Do()
-
-	if err != nil {
-		return err
-	}
-	res.Body.FromJsonTo(&obj)
-	res.Body.Close()
-	if res.StatusCode == 409 {
-		return errors.New("409")
-	}
-	if res.StatusCode != 200 {
-		return  errors.New(strconv.Itoa(res.StatusCode))
-	}
-	return nil
-}
-
-
 // GET http://localhost:8080/users/1
 //
 func (u UserGraphResource) findUser(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
-	obj, _ := u.getObject(id, response)
-	if obj != nil {
-		user :=  obj.Data.User
-		user.Id = obj.Id
-		response.WriteEntity(user)
-	}
-}
-
-func (u *UserGraphResource) getObject(id string, response *restful.Response) (*Object, error) {
-	res, err := goreq.Request{
-		Uri: u.baseUrl+id,
-		Accept: "application/json",
-		ContentType: "application/json",
-	}.Do()
-
+	obj, err := u.getObject(id, response)
 	if err != nil {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusInternalServerError, err.Error())
-		return nil, errors.New("500")
+		return
 	}
-	if res.StatusCode == 404 {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusNotFound, "404: Requested item could not be found.")
-		return nil, errors.New("404")
-	}
-	if res.StatusCode != 200 {
-		response.AddHeader("Content-Type", "text/plain")
-		value, _ := res.Body.ToString()
-		response.WriteErrorString(http.StatusInternalServerError,"Object store returned: "+
-		strconv.Itoa(res.StatusCode) +" Response body:\n"+value)
-		return nil, errors.New(strconv.Itoa(res.StatusCode))
-	}
-	obj := new(Object)
-	res.Body.FromJsonTo(&obj)
-	res.Body.Close()
-	return obj, nil
+	user := obj.Data.User
+	user.Id = obj.Id
+	response.WriteEntity(user)
 }
 
 // POST http://localhost:8080/users
@@ -161,10 +84,10 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 	}
 
 	res, err := goreq.Request{
-		Method: "POST",
-		Body: obj,
-		Uri: u.baseUrl,
-		Accept: "application/json",
+		Method:      "POST",
+		Body:        obj,
+		Uri:         u.baseUrl,
+		Accept:      "application/json",
 		ContentType: "application/json",
 	}.Do()
 
@@ -176,15 +99,16 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 	if res.StatusCode != 201 {
 		response.AddHeader("Content-Type", "text/plain")
 		value, _ := res.Body.ToString()
-		response.WriteErrorString(http.StatusInternalServerError,"Object store returned: "+
-				strconv.Itoa(res.StatusCode)+" Response body:\n"+value)
+		response.WriteErrorString(http.StatusInternalServerError, "Object store returned: "+
+			strconv.Itoa(res.StatusCode)+" Response body:\n"+value)
 		return
 	}
 	res.Body.FromJsonTo(&obj)
 	res.Body.Close()
-	fmt.Printf("\n%+v",obj)
-	user :=  obj.Data.User
+	fmt.Printf("\n%+v", obj)
+	user := obj.Data.User
 	user.Id = obj.Id
+	response.WriteHeader(http.StatusCreated)
 	response.WriteEntity(user)
 }
 

@@ -8,13 +8,8 @@ import (
 	"github.com/emicklei/go-restful/swagger"
 )
 
-type User struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-
 type UserGraphResource struct {
-	 baseUrl string
+	baseUrl string
 }
 
 func (u UserGraphResource) Register(container *restful.Container) {
@@ -38,7 +33,6 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Doc("update a user").
 		Operation("updateUser").
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
-		ReturnsError(400, "duplicate user-id", nil).
 		ReturnsError(404, "User could not be found", nil).
 		Reads(User{})) // from the request
 
@@ -54,6 +48,7 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Doc("get the of list connected users").
 		Operation("getConnectedUsers").
 		Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
+		ReturnsError(404, "User could not be found", nil).
 		Writes([]User{})) // on the response
 
 	ws.Route(ws.PUT("/{user-id}/connectedUsers/{dest-id}").To(u.addConnectedUser).
@@ -61,7 +56,9 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Doc("add a connected user relation").
 		Operation("addConnectedUser").
 		Param(ws.PathParameter("user-id", "identifier of the source user").DataType("string")).
-		Param(ws.PathParameter("dest-id", "identifier of the destination user").DataType("string")))
+		Param(ws.PathParameter("dest-id", "identifier of the destination user").DataType("string")).
+		ReturnsError(400, "duplicate user-id", nil).
+		ReturnsError(404, "User could not be found", nil))
 
 	container.Add(ws)
 }
