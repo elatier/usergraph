@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/emicklei/go-restful"
 	"github.com/franela/goreq"
 	"net/http"
@@ -105,7 +104,6 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 	}
 	res.Body.FromJsonTo(&obj)
 	res.Body.Close()
-	fmt.Printf("\n%+v", obj)
 	user := obj.Data.User
 	user.Id = obj.Id
 	response.WriteHeader(http.StatusCreated)
