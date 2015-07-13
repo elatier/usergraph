@@ -14,7 +14,7 @@ type User struct {
 }
 
 type UserGraphResource struct {
-
+	 baseUrl string
 }
 
 func (u UserGraphResource) Register(container *restful.Container) {
@@ -30,6 +30,7 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Doc("get a user").
 		Operation("findUser").
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
+		ReturnsError(404, "User could not be found", nil).
 		Writes(User{})) // on the response
 
 	ws.Route(ws.PUT("/{user-id}").To(u.updateUser).
@@ -37,7 +38,7 @@ func (u UserGraphResource) Register(container *restful.Container) {
 		Doc("update a user").
 		Operation("updateUser").
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
-		ReturnsError(409, "duplicate user-id", nil).
+		ReturnsError(400, "duplicate user-id", nil).
 		ReturnsError(404, "User could not be found", nil).
 		Reads(User{})) // from the request
 
@@ -68,7 +69,7 @@ func (u UserGraphResource) Register(container *restful.Container) {
 func main() {
 	// to see what happens in the package, uncomment the following
 	//restful.TraceLogger(log.New(os.Stdout, "[restful] ", log.LstdFlags|log.Lshortfile))
-	ug := UserGraphResource{}
+	ug := UserGraphResource{"http://localhost:8090/tables/usergraph/objects/"}
 	wsContainer := restful.NewContainer()
 
 	ug.Register(wsContainer)
@@ -78,7 +79,7 @@ func main() {
 	// Open http://localhost:8080/apidocs and enter http://localhost:8080/apidocs.json in the api input field.
 	config := swagger.Config{
 		WebServices:    wsContainer.RegisteredWebServices(), // you control what services are visible
-		WebServicesUrl: "http://localhost:8080",
+		WebServicesUrl: "http://localhost:8085",
 		ApiPath:        "/apidocs.json",
 
 		// Optionally, specifiy where the UI is located
@@ -86,7 +87,7 @@ func main() {
 		SwaggerFilePath: "/Users/kriaval/developer/swagger-ui"}
 	swagger.RegisterSwaggerService(config, wsContainer)
 
-	log.Printf("start listening on localhost:8080")
-	server := &http.Server{Addr: ":8080", Handler: wsContainer}
+	log.Printf("start listening on localhost:8085")
+	server := &http.Server{Addr: ":8085", Handler: wsContainer}
 	log.Fatal(server.ListenAndServe())
 }

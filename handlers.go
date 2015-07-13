@@ -22,13 +22,13 @@ type UserGraphNode struct {
 
 func (u UserGraphResource) getConnectedUsers(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
-	obj, err := getObject(id, response)
+	obj, err := u.getObject(id, response)
 	if err != nil {
 		return
 	}
 	users := make([]User, 0)
 	for _, edgeUserId := range obj.Data.Edges {
-		relatedObj, err := getObject(edgeUserId, response)
+		relatedObj, err := u.getObject(edgeUserId, response)
 		if err != nil {
 			return
 		}
@@ -50,8 +50,8 @@ func (u UserGraphResource) addConnectedUser(request *restful.Request, response *
 		response.WriteErrorString(http.StatusBadRequest, "Source and destination ID is indentical")
 		return
 	}
-	obj, err := getObject(user1, response)
-	obj2, err2 := getObject(user2, response)
+	obj, err := u.getObject(user1, response)
+	obj2, err2 := u.getObject(user2, response)
 	if err != nil || err2 != nil {
 		return
 	}
@@ -79,14 +79,14 @@ func (u UserGraphResource) createNewConnection(user1, user2 *Object) error {
 		}
 	}
 	user1.Data.Edges = append(edges, relatedId)
-	return updateObject(user1)
+	return u.updateObject(user1)
 }
 
-func updateObject(obj *Object) (error) {
+func (u *UserGraphResource) updateObject(obj *Object) (error) {
 	res, err := goreq.Request{
 		Method: "PUT",
 		Body: obj,
-		Uri: "http://localhost:8090/tables/usergraph/objects/"+obj.Id,
+		Uri: u.baseUrl+obj.Id,
 		Accept: "application/json",
 		ContentType: "application/json",
 	}.Do()
@@ -110,7 +110,7 @@ func updateObject(obj *Object) (error) {
 //
 func (u UserGraphResource) findUser(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
-	obj, _ := getObject(id, response)
+	obj, _ := u.getObject(id, response)
 	if obj != nil {
 		user :=  obj.Data.User
 		user.Id = obj.Id
@@ -118,9 +118,9 @@ func (u UserGraphResource) findUser(request *restful.Request, response *restful.
 	}
 }
 
-func getObject(id string, response *restful.Response) (*Object, error) {
+func (u *UserGraphResource) getObject(id string, response *restful.Response) (*Object, error) {
 	res, err := goreq.Request{
-		Uri: "http://localhost:8090/tables/usergraph/objects/"+id,
+		Uri: u.baseUrl+id,
 		Accept: "application/json",
 		ContentType: "application/json",
 	}.Do()
@@ -163,7 +163,7 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 	res, err := goreq.Request{
 		Method: "POST",
 		Body: obj,
-		Uri: "http://localhost:8090/tables/usergraph/objects/",
+		Uri: u.baseUrl,
 		Accept: "application/json",
 		ContentType: "application/json",
 	}.Do()
@@ -193,7 +193,7 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 //
 func (u *UserGraphResource) updateUser(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
-	obj, err := getObject(id, response)
+	obj, err := u.getObject(id, response)
 	if err != nil {
 		return
 	}
@@ -204,6 +204,6 @@ func (u *UserGraphResource) updateUser(request *restful.Request, response *restf
 		return
 	}
 	obj.Data.User.Id = obj.Id
-	err = updateObject(obj)
+	err = u.updateObject(obj)
 	response.WriteEntity(obj.Data.User)
 }
