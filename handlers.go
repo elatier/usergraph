@@ -7,57 +7,7 @@ import (
 	"strconv"
 )
 
-func (u UserGraphResource) getConnectedUsers(request *restful.Request, response *restful.Response) {
-	id := request.PathParameter("user-id")
-	obj, err := u.getObject(id, response)
-	if err != nil {
-		return
-	}
-	users := make([]User, 0)
-	for _, edgeUserId := range obj.Data.Edges {
-		relatedObj, err := u.getObject(edgeUserId, response)
-		if err != nil {
-			return
-		}
-		relatedUser := relatedObj.Data.User
-		relatedUser.Id = relatedObj.Id
-		users = append(users, relatedUser)
-
-	}
-	response.WriteEntity(users)
-}
-
-// PUT http://localhost:8080/users/{id}/connectedUsers/{id2}
-//
-func (u UserGraphResource) addConnectedUser(request *restful.Request, response *restful.Response) {
-	user1 := request.PathParameter("user-id")
-	user2 := request.PathParameter("dest-id")
-	if user1 == user2 {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusBadRequest, "Source and destination ID is indentical")
-		return
-	}
-	obj, err := u.getObject(user1, response)
-	obj2, err2 := u.getObject(user2, response)
-	if err != nil || err2 != nil {
-		return
-	}
-	err = u.createNewConnection(obj, obj2)
-	if err != nil {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusInternalServerError, err.Error())
-		return
-	}
-	err2 = u.createNewConnection(obj2, obj)
-	if err2 != nil {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.WriteHeader(http.StatusCreated)
-}
-
-// GET http://localhost:8080/users/1
+// GET http://localhost:8085/users/{id}
 //
 func (u UserGraphResource) findUser(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
@@ -70,8 +20,8 @@ func (u UserGraphResource) findUser(request *restful.Request, response *restful.
 	response.WriteEntity(user)
 }
 
-// POST http://localhost:8080/users
-// <User><Name>Melissa</Name></User>
+// POST http://localhost:8085/users
+// {"name":"user name"}
 //
 func (u *UserGraphResource) createUser(request *restful.Request, response *restful.Response) {
 	obj := new(Object)
@@ -110,8 +60,8 @@ func (u *UserGraphResource) createUser(request *restful.Request, response *restf
 	response.WriteEntity(user)
 }
 
-// PUT http://localhost:8080/users/1
-// <User><Id>1</Id><Name>Melissa Raspberry</Name></User>
+// PUT http://localhost:8085/users/{id}
+// {"name":"user name"}
 //
 func (u *UserGraphResource) updateUser(request *restful.Request, response *restful.Response) {
 	id := request.PathParameter("user-id")
@@ -128,4 +78,56 @@ func (u *UserGraphResource) updateUser(request *restful.Request, response *restf
 	obj.Data.User.Id = obj.Id
 	err = u.updateObject(obj)
 	response.WriteEntity(obj.Data.User)
+}
+
+// GET http://localhost:8085/users/{id}/connectedUsers
+//
+func (u UserGraphResource) getConnectedUsers(request *restful.Request, response *restful.Response) {
+	id := request.PathParameter("user-id")
+	obj, err := u.getObject(id, response)
+	if err != nil {
+		return
+	}
+	users := make([]User, 0)
+	for _, edgeUserId := range obj.Data.Edges {
+		relatedObj, err := u.getObject(edgeUserId, response)
+		if err != nil {
+			return
+		}
+		relatedUser := relatedObj.Data.User
+		relatedUser.Id = relatedObj.Id
+		users = append(users, relatedUser)
+
+	}
+	response.WriteEntity(users)
+}
+
+// PUT http://localhost:8085/users/{id}/connectedUsers/{id2}
+//
+func (u UserGraphResource) addConnectedUser(request *restful.Request, response *restful.Response) {
+	user1 := request.PathParameter("user-id")
+	user2 := request.PathParameter("dest-id")
+	if user1 == user2 {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusBadRequest, "Source and destination ID is indentical")
+		return
+	}
+	obj, err := u.getObject(user1, response)
+	obj2, err2 := u.getObject(user2, response)
+	if err != nil || err2 != nil {
+		return
+	}
+	err = u.createNewConnection(obj, obj2)
+	if err != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	err2 = u.createNewConnection(obj2, obj)
+	if err2 != nil {
+		response.AddHeader("Content-Type", "text/plain")
+		response.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.WriteHeader(http.StatusCreated)
 }
