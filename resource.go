@@ -24,6 +24,7 @@ type User struct {
 	Name string `json:"name"`
 }
 
+//retrieve object from the object store
 func (u *UserGraphResource) getObject(id string, response *restful.Response) (*Object, error) {
 	res, err := goreq.Request{
 		Uri:         u.baseUrl + id,
@@ -54,6 +55,7 @@ func (u *UserGraphResource) getObject(id string, response *restful.Response) (*O
 	return obj, nil
 }
 
+//store argument object and store
 func (u *UserGraphResource) updateObject(obj *Object) error {
 	res, err := goreq.Request{
 		Method:      "PUT",
@@ -77,6 +79,7 @@ func (u *UserGraphResource) updateObject(obj *Object) error {
 	return nil
 }
 
+//Connect user1 to user2 by adding user2 id reference to user1 edge array and store the changes
 func (u UserGraphResource) createNewConnection(user1, user2 *Object) error {
 	edges := user1.Data.Edges
 	relatedId := user2.Id

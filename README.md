@@ -5,4 +5,4 @@ Swagger UI needs to be downloaded separately from https://github.com/swagger-api
 
 Default API base URL: http://localhost:8085/users/
 
-The service models users and their connections (graph). This service uses https://github.com/elatier/objectstore service for state storage.
+The service models users and their connections to each other (graph). This service uses https://github.com/elatier/objectstore service for state storage.

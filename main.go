@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
 )
